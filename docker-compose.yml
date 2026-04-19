@@ -1,0 +1,12 @@
+services:
+  petcare:
+    build: .
+    container_name: petcare_app
+    ports:
+      - "5050:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./static/uploads:/app/static/uploads
+    restart: unless-stopped

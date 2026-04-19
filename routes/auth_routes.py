@@ -1,6 +1,4 @@
 import os
-import logging
-from smtplib import SMTPException
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
@@ -109,14 +107,19 @@ def restore_password():
             mail = current_app.extensions['mail']
             msg = Message(subject, sender=os.getenv("PETPAL_EMAIL"), recipients=[email])
             msg.html = html
-            mail.send(msg)
 
-            flash("A password reset link has been sent to your email address. Please check your inbox.", "info")
+            try:
+                mail.send(msg)
+                flash("A password reset link has been sent to your email address. Please check your inbox.", "info")
+            except Exception as e:
+                current_app.logger.warning(f"Email send skipped: {e}")
+                flash("Email is not configured on this local setup, so password reset email was skipped.", "warning")
+
             return redirect("/")
 
         except Exception as e:
-            current_app.logger.error("Error sending password reset email: %s", e)
-            return error_message("An error occurred while sending the email. Please try again.", 500)
+            current_app.logger.error("Error preparing password reset email: %s", e)
+            return error_message("An error occurred while processing the password reset request.", 500)
 
     return render_template("restore_password.html", form=form)
 
@@ -125,6 +128,7 @@ def restore_password():
 def reset_password(token):
     """Reset password using token"""
     db = current_app.extensions['sqlalchemy']
+
     try:
         s = Serializer(current_app.secret_key)
         email = s.loads(token, salt='password-reset', max_age=300)
