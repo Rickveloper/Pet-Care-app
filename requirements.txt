@@ -11,3 +11,4 @@ flask-wtf
 wtforms
 email-validator
 matplotlib
+gunicorn
